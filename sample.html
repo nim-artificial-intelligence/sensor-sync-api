@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sensor Sync Demo &amp; Config</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
+
+</head>
+
+<body>
+
+    <script>
+        let apis = {
+            activate: {
+                url: (sensor_number) => {
+                    var ip = document.getElementById("ip").value;
+                    return "http://" + ip + "?activate=" + sensor_number
+                }
+            },
+            reset: {
+                url: (sensor_number) => {
+                    var ip = document.getElementById("ip").value;
+                    return "http://" + ip + "?reset=" + sensor_number
+                }
+            },
+            reboot: {
+                url: () => {
+                    var ip = document.getElementById("ip").value;
+                    return "http://" + ip + "?reboot=true"
+                }
+            },
+            status: {
+                url: () => {
+                    var ip = document.getElementById("ip").value;
+                    return "http://" + ip + "?status=true"
+                }
+            },
+            write_ip: {
+                url: (new_ip) => {
+                    var ip = document.getElementById("ip").value;
+                    return "http://" + ip + "?ip=" + new_ip
+                }
+            },
+            write_mac: {
+                url: (new_mac) => {
+                    var ip = document.getElementById("ip").value;
+                    return "http://" + ip + "?mac=" + new_mac
+                }
+            },
+        };
+
+        function log(text) {
+            var el = document.createElement('html');
+            el.innerHTML = text;
+            console.log(":" + el.innerText);
+
+            var x = document.getElementById("log");
+            x.value = x.value + el.innerText.trim() + '\n';
+            x.scrollTop = x.scrollHeight;
+
+        }
+
+        function activate_sensor(sensor) {
+            return fetch(apis.activate.url(sensor))
+                .then(response => response.text())
+                .then(data => log(data))
+                .catch(function (err) {
+                    console.log('Fetch Error :-S', err);
+                });
+        }
+
+        function reset_sensor(sensor) {
+            return fetch(apis.reset.url(sensor))
+                .then(response => response.text())
+                .then(data => log(data))
+        }
+
+        function reboot() {
+            return fetch(apis.reboot.url())
+                .then(response => response.text())
+                .then(data => log("reboot: " + data))
+        }
+
+        function update_sensor_state(state) {
+            document.getElementById("check-1").checked = false;
+            if (state & 1) {
+                document.getElementById("check-1").checked = true;
+            }
+            document.getElementById("check-2").checked = false;
+            if (state & 2) {
+                document.getElementById("check-2").checked = true;
+            }
+            document.getElementById("check-3").checked = false;
+            if (state & 4) {
+                document.getElementById("check-3").checked = true;
+            }
+            document.getElementById("check-4").checked = false;
+            if (state & 8) {
+                document.getElementById("check-4").checked = true;
+            }
+            document.getElementById("check-5").checked = false;
+            if (state & 16) {
+                document.getElementById("check-5").checked = true;
+            }
+            document.getElementById("check-6").checked = false;
+            if (state & 32) {
+                document.getElementById("check-6").checked = true;
+            }
+            document.getElementById("check-7").checked = false;
+            if (state & 64) {
+                document.getElementById("check-7").checked = true;
+            }
+            document.getElementById("check-8").checked = false;
+            if (state & 128) {
+                document.getElementById("check-8").checked = true;
+            }
+        }
+
+        function handle_status(data) {
+            log("STATUS:" + data);
+
+            const lines = data.split('\n');
+            for (const line of lines) {
+                const keyval = line.split('=');
+                if (keyval.length != 2)
+                    continue;
+                const key = keyval[0];
+                const value = keyval[1];
+                if (key == "MAC") {
+                    var mac_element = document.getElementById("new_mac");
+                    mac_element.value = value;
+                }
+                if (key == "IP") {
+                    var ip_element = document.getElementById("new_ip");
+                    ip_element.value = value;
+                }
+                if (key == "SENSORS") {
+                    var state = parseInt(value, 16);
+                    update_sensor_state(state);
+                }
+            }
+        }
+
+        function read_config() {
+            var ip = document.getElementById("ip").value;
+            // document.getElementById("new_ip").value = ip;
+            return fetch(apis.status.url())
+                .then(response => response.text())
+                .then(data => handle_status(data))
+        }
+
+        function write_ip() {
+            var ip = document.getElementById("new_ip").value;
+            return fetch(apis.write_ip.url(ip))
+                .then(response => response.text())
+                .then(data => log("write ip:" + data))
+        }
+
+        function write_mac() {
+            var ip = document.getElementById("new_mac").value;
+            return fetch(apis.write_mac.url(ip))
+                .then(response => response.text())
+                .then(data => log("write mac:" + data))
+        }
+
+        function foo(sensor) {
+            var id = "check-" + sensor;
+            var cb = document.getElementById(id);
+            if (cb.checked == false) {
+                reset_sensor(sensor);
+            } else {
+                activate_sensor(sensor);
+            }
+        }
+    </script>
+
+    <div class="container">
+        <h1>NIM Tech Lab Sensor Sync </h1>
+        <br>
+        <div class="form-group">
+            <label for="ip">Communication IP address</label>
+            <table>
+                <tr>
+                    <td style="width:80%">
+                        <input type="text" class="form-control" id="ip" name="ip" value="192.168.2.49">
+                    </td>
+                    <td style="padding-left:4px">
+                        <button class="btn btn-primary" type="button" onclick="read_config();">read
+                            config</button>
+                    </td>
+                    <td style="padding-left:4px">
+                        <button class="btn btn-danger" type="button" onclick="reboot();">REBOOT</button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <br>
+
+        <label for="config">Configuration</label>
+        <div class="well" id="config">
+            <div class="form-group">
+                <label for="ip">IP address</label>
+                <table>
+                    <tr>
+                        <td style="width:80%">
+                            <input type="text" class="form-control" id="new_ip" name="new_ip" value="">
+                        </td>
+                        <td style="padding-left:4px">
+                            <button class="btn btn-danger" type="button" onclick="write_ip();">write</button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="form-group">
+                <label for="ip">MAC address</label>
+                <table>
+                    <tr>
+                        <td style="width:80%">
+                            <input type="text" class="form-control" id="new_mac" name="new_mac" value="">
+                        </td>
+                        <td style="padding-left:4px">
+                        </td>
+                        <td style="padding-left:4px">
+                            <button class="btn btn-danger" type="button" onclick="write_mac();">write</button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <br>
+
+        <label for="sensors">Sensor Control</label>
+        <div class="well" id="sensors">
+            <table class="table ">
+                <thead>
+                    <tr>
+                        <th> 1 </th>
+                        <th> 2 </th>
+                        <th> 3 </th>
+                        <th> 4 </th>
+                        <th> 5 </th>
+                        <th> 6 </th>
+                        <th> 7 </th>
+                        <th> 8 </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="table-primary justify-content-center">
+                        <td><input type="checkbox" class="form-check-input" id="check-1" onclick="foo(1);" /></td>
+                        <td><input type="checkbox" class="form-check-input" id="check-2" onclick="foo(2);" /></td>
+                        <td><input type="checkbox" class="form-check-input" id="check-3" onclick="foo(3);" /></td>
+                        <td><input type="checkbox" class="form-check-input" id="check-4" onclick="foo(4);" /></td>
+                        <td><input type="checkbox" class="form-check-input" id="check-5" onclick="foo(5);" /></td>
+                        <td><input type="checkbox" class="form-check-input" id="check-6" onclick="foo(6);" /></td>
+                        <td><input type="checkbox" class="form-check-input" id="check-7" onclick="foo(7);" /></td>
+                        <td><input type="checkbox" class="form-check-input" id="check-8" onclick="foo(8);" /></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <br>
+
+        <div class="form-group">
+            <label for="log">Log:</label>
+            <textarea class="form-control" rows="8" id="log" enabled="false"></textarea>
+        </div>
+</body>
+
+</html>

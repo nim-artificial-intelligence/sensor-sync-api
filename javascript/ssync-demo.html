@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ssync.js Sample</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
+
+    <!-- include ssync.js API -->
+    <script src="ssync.js"></script>
+
+</head>
+
+<body>
+    <div class="container">
+        <h1>See Source Code</h1>
+        <br>
+
+        <!-- log text area -->
+        <div class="form-group">
+            <label for="log">Log:</label>
+            <textarea class="form-control" rows="10" id="log" enabled="false"></textarea>
+        </div>
+
+        <!-- form containing our ui controls -->
+        <div class="form-group">
+            <label for="ip">Communication IP address</label>
+            <table>
+                <tr>
+                    <td style="width:80%">
+                        <!-- input field for the IP address to use. Script will take it from there. -->
+                        <input type="text" class="form-control" id="ip" name="ip" value="192.168.2.49">
+                    </td>
+                    <td style="padding-left:4px">
+                        <button class="btn btn-primary" type="button" onclick="on_read_config();">read
+                            config</button>
+                    </td>
+                    <td style="padding-left:4px">
+                        <!-- button. onclick calls script function below that calls activate_sensor-->
+                        <button class="btn btn-info" type="button" onclick="on_set_sensor();">Set Sensor 1</button>
+                    </td>
+                    <td style="padding-left:4px">
+                        <!-- button. onclick calls script function below that calls reset_sensor -->
+                        <button class="btn btn-danger" type="button" onclick="on_reset_sensor();">Reset Sensor
+                            1</button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <script>
+            // log text that can be HTML to the log area 
+            function log(maybe_html) {
+                var el = document.createElement('html');    // create a temp invisible html element
+
+                // HTML to text conversion, part 1
+                // set the element's inner HTML, so we can later retrieve its innerText
+                el.innerHTML = maybe_html;
+
+                // append inner text (converted HTML) to log area and scroll down to keep
+                // latest text visible
+                var x = document.getElementById("log");
+                x.value = x.value + el.innerText.trim() + '\n';
+                x.scrollTop = x.scrollHeight;
+            }
+
+            // on_read_config: called when the `read config` button is pressed (see its onclick attribure)
+            function on_read_config() {
+                // use the ip address from the HTML field - could have been changed by user
+                var ip = document.getElementById("ip").value;
+                set_ssync_ip(ip);
+
+                // read the config. on success, log its ip, mac, sensor states
+                read_config().
+                    then(data => log('\n' +
+                        'ip: ' + data.ip + '\n' +
+                        'mac: ' + data.mac + '\n' +
+                        'sensor states: ' + data.sensors + '\n')
+                    // on error, log it
+                    ).catch((err) => log("Error:" + err.toString()));
+            }
+
+            // on_set_sensor: called when the `Set Sensor 1` button is pressed (see its onclick attribure)
+            function on_set_sensor() {
+                // use the ip address from the HTML field - could have been changed by user
+                var ip = document.getElementById("ip").value;
+                set_ssync_ip(ip);
+                // activate sensor 1, log success and error
+                activate_sensor(1).then(data => log(data)).catch((err) => log("Error:" + err.toString()));
+            }
+
+            // on_resset_sensor: called when the `Reset Sensor 1` button is pressed (see its onclick attribure)
+            function on_reset_sensor() {
+                // use the ip address from the HTML field - could have been changed by user
+                var ip = document.getElementById("ip").value;
+                set_ssync_ip(ip);
+                reset_sensor(1).then(data => log(data)).catch((err) => log("Error:" + err.toString()));
+            }
+
+            // just a demo function: do stuff in order
+            async function foo() {
+                log('the following happens in order');
+                // just activate
+                await activate_sensor(1);
+
+                // activate sensor and log result to console
+                await reset_sensor(1).then(result_html => log(result_html));
+
+                // activate sensor and log result to console, catch and log error
+                await activate_sensor(1)
+                    .then(result_html => log(result_html))
+                    .catch(function (err) {
+                        log('Fetch Error :-S', err);
+                    });
+
+                await read_config().then((data) => {
+                    log('\n' +
+                        'ip: ' + data.ip + '\n' +
+                        'mac: ' + data.mac + '\n' +
+                        'sensor states: ' + data.sensors + '\n');
+                    console.log(data);
+                }
+                );
+                log('finished');
+            }
+            foo();   // call demo foo immediately after loading the page
+        </script>
+</body>
+
+</html>
