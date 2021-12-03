@@ -49,7 +49,7 @@ laptops during the experiment.
 
 ## 1. Configuring the device
 
-Use [the configuration tool](./sample.html). You can run it by opening it ([sample.html](sample.html)) in a browser, no
+Use [the configuration tool](./sample.html) after cloning this repository. You can run it by opening it ([sample.html](sample.html)) in a browser, no
 HTTP server required.
 
 This tool allows you to:
